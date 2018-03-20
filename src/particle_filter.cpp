@@ -101,18 +101,24 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
   
+  // precompute for performance
+  double std_landmark_x_sq2 = 2 * pow(std_landmark[0], 2.0);
+  double std_landmark_y_sq2 = 2 * pow(std_landmark[1], 2.0);
+  double std_landmark_pi_2 = 2 * M_PI * std_landmark[0] * std_landmark[1];
+  
+  
   for (int p = 0; p < num_particles; p++) {
     vector<LandmarkObs> trans_observations;
     LandmarkObs obs;
     
     for (int i = 0; i < observations.size(); i++) {
-      LandmarkObs trans_obs;
+      LandmarkObs map_obs;
       obs = observations[i];
       
       // Transform from vechicle space to map space.
-      trans_obs.x = particles[p].x + (obs.x * cos(particles[p].theta) - obs.y * sin(particles[p].theta));
-      trans_obs.y = particles[p].y + (obs.x * sin(particles[p].theta) + obs.y * cos(particles[p].theta));
-      trans_observations.push_back(trans_obs);
+      map_obs.x = particles[p].x + (obs.x * cos(particles[p].theta) - obs.y * sin(particles[p].theta));
+      map_obs.y = particles[p].y + (obs.x * sin(particles[p].theta) + obs.y * cos(particles[p].theta));
+      trans_observations.push_back(map_obs);
     }
     
     particles[p].weight = 1.0;
@@ -135,7 +141,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         double meas_y = trans_observations[i].y;
         double mu_x = map_landmarks.landmark_list[association].x_f;
         double mu_y = map_landmarks.landmark_list[association].y_f;
-        long double multipler = 1 / (2 * M_PI * std_landmark[0] * std_landmark[1]) * exp(-(pow(meas_x - mu_x, 2.0)/(2 * pow(std_landmark[0], 2.0)) + pow(meas_y - mu_y, 2.0) / (2 * pow(std_landmark[1], 2.0))));
+        long double multipler = 1 / std_landmark_pi_2 * exp(-(pow(meas_x - mu_x, 2.0) / std_landmark_x_sq2 + pow(meas_y - mu_y, 2.0) / std_landmark_y_sq2));
         if (multipler > 0) {
           particles[p].weight *= multipler;
         }
